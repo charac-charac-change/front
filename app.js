@@ -3,6 +3,11 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var request = require('request');
+var multer = require("multer");
+const fs = require("fs");
+const url = require('url');
+const querystring = require('querystring')
 
 var startRouter = require('./routes/start');
 var loginRouter = require('./routes/login');
@@ -43,5 +48,57 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+const upload = multer({
+  dest: "/path/to/temporary/directory/to/store/uploaded/files"
+  // you might also want to set some limits: https://github.com/expressjs/multer#limits
+});
+
+app.post("/upload"  ,
+  upload.single("file" /* name attribute of <file> element in your form */),
+  (req, res) => {
+    const tempPath = req.file.path;
+    const targetPath = path.join(__dirname, "./uploads/image.jpg");
+    //path.extname(req.file.originalname).toLowerCase() === ".jpg"
+    if (true) {
+      // fs.rename(tempPath, targetPath, err => {
+      //   if (err) return handleError(err, res);
+      //   res
+      //     .status(200)
+      //     .contentType("text/plain")
+      //     .end("File uploaded!");
+      // });
+      var formData = {
+        "file": fs.createReadStream(tempPath)
+
+      };
+        
+      request.post({url:'http://10.120.72.244:5000/remove', formData: formData,headers:{"Content-Type": "multipart/form-data"}}, function optionalCallback(err, httpResponse, body) {
+        if (err) {  
+          return console.error('upload failed:', err);
+        }
+        //console.log('Upload successful!  Server responded with:', body);
+        console.log(body)
+        var base64Data = body.replace(/^data:image\/png;base64,/, "");
+        fs.writeFile("out.png", base64Data, 'base64', function(err) {
+          console.log("fs.writeFile_error "+err);
+        });
+        //res.redirect('/result')
+      });
+
+    } else {
+      fs.unlink(tempPath, err => {
+        if (err) return handleError(err, res);
+
+        res
+          .status(403)
+          .contentType("text/plain")
+          .end("Only .jpg files are allowed!");
+      });
+    }
+    res.redirect('/image')
+
+  }
+);
 
 module.exports = app;
