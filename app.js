@@ -14,6 +14,8 @@ var loginRouter = require('./routes/login');
 var registerRouter = require('./routes/register');
 var mainRouter = require('./routes/index');
 var db = require('./routes/dbTest');
+const mysql = require('mysql');
+const dbconfig = require('./config/db_config');
 
 var app = express();
 
@@ -26,6 +28,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+const conn = mysql.createConnection(dbconfig);
 
 app.use('/', startRouter);
 app.use('/login', loginRouter);
@@ -60,16 +63,7 @@ app.post("/upload"  ,
   (req, res) => {
     console.log(req.body);
     const tempPath = req.file.path;
-    const targetPath = path.join(__dirname, "./uploads/image.jpg");
-    //path.extname(req.file.originalname).toLowerCase() === ".jpg"
     if (true) {
-      // fs.rename(tempPath, targetPath, err => {
-      //   if (err) return handleError(err, res);
-      //   res
-      //     .status(200)
-      //     .contentType("text/plain")
-      //     .end("File uploaded!");
-      // });
       var formData = {
         "file": fs.createReadStream(tempPath)
       };
@@ -81,24 +75,23 @@ app.post("/upload"  ,
         //console.log('Upload successful!  Server responded with:', body);
         console.log(body)
         var base64Data = body.replace(/^data:image\/png;base64,/, "");
+        var bufferValue = Buffer.from(base64Data,"base64");
+        var now = new Date();
+
+        conn.query(`INSERT INTO image(email, image, created) values(?, ?, ?)`, [req.cookies.email,bufferValue,now], function(err, rows, field){
+          if(err) console.log(err);
+          //console.log('1');
+          //여기서 응답
+          //res.redirect('/result');
+        });
+
          fs.writeFile("out.png", base64Data, 'base64', function(err) {
            console.log("fs.writeFile_error "+err);
          });
         res.redirect('/result')
       });
 
-    } else {
-      fs.unlink(tempPath, err => {
-        if (err) return handleError(err, res);
-
-        res
-          .status(403)
-          .contentType("text/plain")
-          .end("Only .jpg files are allowed!");
-      });
-    }
-    
-
+    } 
   }
 );
 

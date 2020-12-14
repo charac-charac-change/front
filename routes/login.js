@@ -6,7 +6,19 @@ const conn = mysql.createConnection(dbconfig);
 
 /* GET home page. */
 router.get("/", function (req, res, next) {
-  res.render("login");
+  console.log(req.cookies.myCookie);
+  if(req.cookies.myCookie){
+    if(req.cookies.myCookie == "1"){
+      res.redirect('/main');
+    }
+    else{
+      res.render("login");
+    }
+  }
+  else{
+    res.render("login");
+  }
+  
 });
 
 router.post("/user", function (req, res, next) {
@@ -22,6 +34,8 @@ router.post("/user", function (req, res, next) {
       if (err) console.log(err);
       if (rows[0].email == email) {
         if (rows[0].password == password) {
+          res.cookie("myCookie","1");
+          res.cookie("email",email);
           res.redirect("/main");
         } else {
           res.redirect("/login");
