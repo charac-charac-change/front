@@ -12,7 +12,7 @@ const querystring = require('querystring')
 var startRouter = require('./routes/start');
 var loginRouter = require('./routes/login');
 var registerRouter = require('./routes/register');
-var mainRouter = require('./routes/main');
+var mainRouter = require('./routes/index');
 var db = require('./routes/dbTest');
 
 var app = express();
@@ -34,9 +34,10 @@ app.use('/main', mainRouter);
 app.use('/', db);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
+// app.use(function(req, res, next) {
+//   console.log('here');
+//   next(createError(404));
+// });
 
 // error handler
 app.use(function(err, req, res, next) {
@@ -50,13 +51,14 @@ app.use(function(err, req, res, next) {
 });
 
 const upload = multer({
-  dest: "/path/to/temporary/directory/to/store/uploaded/files"
+  dest: "D:/project/front/files"
   // you might also want to set some limits: https://github.com/expressjs/multer#limits
 });
 
 app.post("/upload"  ,
   upload.single("file" /* name attribute of <file> element in your form */),
   (req, res) => {
+    console.log(req.body);
     const tempPath = req.file.path;
     const targetPath = path.join(__dirname, "./uploads/image.jpg");
     //path.extname(req.file.originalname).toLowerCase() === ".jpg"
@@ -70,20 +72,19 @@ app.post("/upload"  ,
       // });
       var formData = {
         "file": fs.createReadStream(tempPath)
-
       };
         
       request.post({url:'http://10.120.72.244:5000/remove', formData: formData,headers:{"Content-Type": "multipart/form-data"}}, function optionalCallback(err, httpResponse, body) {
-        if (err) {  
+        if (err) {
           return console.error('upload failed:', err);
         }
         //console.log('Upload successful!  Server responded with:', body);
         console.log(body)
         var base64Data = body.replace(/^data:image\/png;base64,/, "");
-        fs.writeFile("out.png", base64Data, 'base64', function(err) {
-          console.log("fs.writeFile_error "+err);
-        });
-        //res.redirect('/result')
+         fs.writeFile("out.png", base64Data, 'base64', function(err) {
+           console.log("fs.writeFile_error "+err);
+         });
+        res.redirect('/result')
       });
 
     } else {
@@ -96,9 +97,52 @@ app.post("/upload"  ,
           .end("Only .jpg files are allowed!");
       });
     }
-    res.redirect('/image')
+    
 
   }
 );
 
+app.get("/Background",(req,res) =>{
+  var parsedUrl = url.parse(req.url);
+  var qs = querystring.parse(parsedUrl.query);
+  
+  const options = {
+    uri : 'http://127.0.0.1:5000/select',
+    method : 'POST',
+    form : {
+      "file": fs.createReadStream('./out.png'),
+      "data": qs.select,
+    },
+    headers:{"Content-Type": "multipart/form-data"}
+  };
+
+  request.post(options, function optionalCallback(err, httpResponse, body) {
+        if (err) {
+          return console.error('upload failed:', err);
+        }
+        //console.log('Upload successful!  Server responded with:', body);
+        console.log(body)
+        var base64Data = body.replace(/^data:image\/png;base64,/, "");
+        fs.writeFile("out.png", base64Data, 'base64', function(err) {
+          console.log("fs.writeFile_error "+err);
+        });
+        //res.redirect('/result')
+      });
+  console.log("selected"+qs.select);
+});
+
+function base64_encode(file) {
+  // read binary data
+  var bitmap = fs.readFileSync(file);
+  // convert binary data to base64 encoded string
+  return new Buffer(bitmap).toString('base64');
+}
+
+app.get("/image", (req, res) => {
+  res.sendFile(path.join(__dirname, "./uploads/loading.jpg"));
+});
+
+app.get("/result", (req, res) => {
+  res.sendFile(path.join(__dirname, "./out.png"));
+});
 module.exports = app;
