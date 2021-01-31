@@ -23,7 +23,7 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.use(logger('dev'));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -68,7 +68,8 @@ app.post("/upload"  ,
         "file": fs.createReadStream(tempPath)
       };
         
-      request.post({url:'http://10.120.72.244:5000/remove', formData: formData,headers:{"Content-Type": "multipart/form-data"}}, function optionalCallback(err, httpResponse, body) {
+      //'http://10.120.72.244:5000/remove'
+      request.post({url:'http://10.120.72.237:5000/remove', formData: formData,headers:{"Content-Type": "multipart/form-data"}}, function optionalCallback(err, httpResponse, body) {
         if (err) {
           return console.error('upload failed:', err);
         }
@@ -78,12 +79,23 @@ app.post("/upload"  ,
         var bufferValue = Buffer.from(base64Data,"base64");
         var now = new Date();
 
-        conn.query(`INSERT INTO image(email, image, created) values(?, ?, ?)`, [req.cookies.email,bufferValue,now], function(err, rows, field){
+        conn.query(
+          `INSERT INTO image_2(image, created) values( ?, ?)`, 
+          [bufferValue,now], 
+          function(err, rows, field){ 
           if(err) console.log(err);
-          //console.log('1');
-          //여기서 응답
-          //res.redirect('/result');
+          conn.query(
+            `insert  into linked_user_image(image_id,email) values((select max(image_2.image_id) from image_2),"${req.cookies.email}");`, 
+            function(err, rows, field){ 
+              
+              if(err) console.log(err);
+              //console.log(rows[0]);
+          });
         });
+        
+        
+
+        
 
          fs.writeFile("out.png", base64Data, 'base64', function(err) {
            console.log("fs.writeFile_error "+err);
@@ -138,4 +150,5 @@ app.get("/image", (req, res) => {
 app.get("/result", (req, res) => {
   res.sendFile(path.join(__dirname, "./out.png"));
 });
+
 module.exports = app;

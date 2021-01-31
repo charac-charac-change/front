@@ -18,7 +18,6 @@ router.get("/", function (req, res, next) {
   else{
     res.render("login");
   }
-  
 });
 
 router.post("/user", function (req, res, next) {
@@ -36,6 +35,7 @@ router.post("/user", function (req, res, next) {
         if (rows[0].password == password) {
           res.cookie("myCookie","1");
           res.cookie("email",email);
+          res.cookie("name",rows[0].username)
           res.redirect("/main");
         } else {
           res.redirect("/login");
